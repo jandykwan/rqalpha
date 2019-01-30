@@ -17,6 +17,8 @@
 import six
 import pickle
 
+import numpy as np
+
 from rqalpha.const import DEFAULT_ACCOUNT_TYPE
 from rqalpha.environment import Environment
 from rqalpha.utils.logger import user_system_log, system_log
@@ -36,14 +38,23 @@ class RunInfo(object):
         self._frequency = config.base.frequency
         self._stock_starting_cash = config.base.accounts.get(DEFAULT_ACCOUNT_TYPE.STOCK.name, 0)
         self._future_starting_cash = config.base.accounts.get(DEFAULT_ACCOUNT_TYPE.FUTURE.name, 0)
-        self._benchmark = config.base.benchmark
         self._margin_multiplier = config.base.margin_multiplier
         self._run_type = config.base.run_type
 
         # For Mod
-        self._matching_type = config.mod.sys_simulation.matching_type
-        self._slippage = config.mod.sys_simulation.slippage
-        self._commission_multiplier = config.mod.sys_simulation.commission_multiplier
+
+        # FIXME: deprecationwarning
+        self._matching_type = None
+        self._benchmark = None
+        self._slippage = np.nan
+        self._commission_multiplier = np.nan
+        try:
+            self._matching_type = config.mod.sys_simulation.matching_type
+            self._benchmark = config.mod.sys_benchmark.order_book_id
+            self._slippage = config.mod.sys_simulation.slippage
+            self._commission_multiplier = config.mod.sys_transaction_cost.commission_multiplier
+        except:
+            pass
 
     @property
     def start_date(self):

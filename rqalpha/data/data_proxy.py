@@ -22,7 +22,7 @@ from rqalpha.data import risk_free_helper
 from rqalpha.data.instrument_mixin import InstrumentMixin
 from rqalpha.data.trading_dates_mixin import TradingDatesMixin
 from rqalpha.model.bar import BarObject
-from rqalpha.model.snapshot import SnapshotObject
+from rqalpha.model.tick import TickObject
 from rqalpha.utils.py2 import lru_cache
 from rqalpha.utils.datetime_func import convert_int_to_datetime, convert_date_to_int
 
@@ -74,8 +74,13 @@ class DataProxy(InstrumentMixin, TradingDatesMixin):
         if table is None or len(table) == 0:
             return
 
+        try:
+            dates = table['book_closure_date']
+        except ValueError:
+            dates = table['ex_dividend_date']
+            date = self.get_next_trading_date(date)
+
         dt = date.year * 10000 + date.month * 100 + date.day
-        dates = table['book_closure_date']
         pos = dates.searchsorted(dt)
         if pos == len(dates) or dt != dates[pos]:
             return None
@@ -97,9 +102,10 @@ class DataProxy(InstrumentMixin, TradingDatesMixin):
     @lru_cache(10240)
     def _get_prev_close(self, order_book_id, dt):
         instrument = self.instruments(order_book_id)
-        bar = self._data_source.history_bars(instrument, 2, '1d', 'close', dt,
+        prev_trading_date = self.get_previous_trading_date(dt)
+        bar = self._data_source.history_bars(instrument, 1, '1d', 'close', prev_trading_date,
                                              skip_suspended=False, include_now=False, adjust_orig=dt)
-        if bar is None or len(bar) < 2:
+        if bar is None or len(bar) < 1:
             return np.nan
         return bar[0]
 
@@ -154,25 +160,38 @@ class DataProxy(InstrumentMixin, TradingDatesMixin):
                                               skip_suspended=skip_suspended, include_now=include_now,
                                               adjust_type=adjust_type, adjust_orig=adjust_orig)
 
+    def history_ticks(self, order_book_id, count, dt):
+        instrument = self.instruments(order_book_id)
+        return self._data_source.history_ticks(instrument, count, dt)
+
     def current_snapshot(self, order_book_id, frequency, dt):
+
+        def tick_fields_for(ins):
+            _STOCK_FIELD_NAMES = [
+                'datetime', 'open', 'high', 'low', 'last', 'volume', 'total_turnover', 'prev_close',
+                'limit_up', 'limit_down'
+            ]
+            _FUTURE_FIELD_NAMES = _STOCK_FIELD_NAMES + ['open_interest', 'prev_settlement']
+
+            if ins.type == 'Future':
+                return _STOCK_FIELD_NAMES
+            else:
+                return _FUTURE_FIELD_NAMES
+
         instrument = self.instruments(order_book_id)
         if frequency == '1d':
             bar = self._data_source.get_bar(instrument, dt, '1d')
             if not bar:
-                return SnapshotObject(instrument, None, dt)
-            d = {k: bar[k] for k in SnapshotObject.fields_for_(instrument) if k in bar.dtype.names}
+                return None
+            d = {k: bar[k] for k in tick_fields_for(instrument) if k in bar.dtype.names}
             d['last'] = bar['close']
             d['prev_close'] = self._get_prev_close(order_book_id, dt)
-            return SnapshotObject(instrument, d)
+            return TickObject(instrument, d)
 
         return self._data_source.current_snapshot(instrument, frequency, dt)
 
     def available_data_range(self, frequency):
         return self._data_source.available_data_range(frequency)
-
-    def get_margin_info(self, order_book_id):
-        instrument = self.instruments(order_book_id)
-        return self._data_source.get_margin_info(instrument)
 
     def get_commission_info(self, order_book_id):
         instrument = self.instruments(order_book_id)
@@ -216,3 +235,7 @@ class DataProxy(InstrumentMixin, TradingDatesMixin):
     def public_fund_commission(self, order_book_id, buy):
         instrument = self.instruments(order_book_id)
         return self._data_source.public_fund_commission(instrument, buy)
+
+    def get_tick_size(self, order_book_id):
+        instrument = self.instruments(order_book_id)
+        return self._data_source.get_tick_size(instrument)

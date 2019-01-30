@@ -27,6 +27,7 @@ from rqalpha.utils.i18n import gettext as _
 from rqalpha.data.future_info_cn import CN_FUTURE_INFO
 from rqalpha.data.converter import StockBarConverter, IndexBarConverter
 from rqalpha.data.converter import FutureDayBarConverter, FundDayBarConverter, PublicFundDayBarConverter
+
 from rqalpha.data.daybar_store import DayBarStore
 from rqalpha.data.date_set import DateSet
 from rqalpha.data.dividend_store import DividendStore
@@ -41,7 +42,7 @@ from rqalpha.data.public_fund_commission import PUBLIC_FUND_COMMISSION
 class BaseDataSource(AbstractDataSource):
     def __init__(self, path):
         if not os.path.exists(path):
-            raise RuntimeError('bundle path {} not exist'.format(os.path.abspath))
+            raise RuntimeError('bundle path {} not exist'.format(os.path.abspath(path)))
 
         def _p(name):
             return os.path.join(path, name)
@@ -197,17 +198,8 @@ class BaseDataSource(AbstractDataSource):
             s, e = self._day_bars[self.INSTRUMENT_TYPE_MAP['INDX']].get_date_range('000001.XSHG')
             return convert_int_to_date(s).date(), convert_int_to_date(e).date()
 
-        raise NotImplementedError
-
-    def get_margin_info(self, instrument):
-        return {
-            'margin_type': MARGIN_TYPE.BY_MONEY,
-            'long_margin_ratio': instrument.margin_rate,
-            'short_margin_ratio': instrument.margin_rate,
-        }
-
     def get_commission_info(self, instrument):
-        return CN_FUTURE_INFO[instrument.underlying_symbol]['speculation']
+        return CN_FUTURE_INFO[instrument.underlying_symbol]
 
     def get_ticks(self, order_book_id, date):
         raise NotImplementedError
@@ -223,3 +215,16 @@ class BaseDataSource(AbstractDataSource):
 
     def non_redeemable(self, order_book_id, dates):
         return self._non_redeemable_days.contains(order_book_id, dates)
+
+    def get_tick_size(self, instrument):
+        if instrument.type == 'CS':
+                return 0.01
+        elif instrument.type == "INDX":
+            return 0.01
+        elif instrument.type in ['ETF', 'LOF', 'FenjiB', 'FenjiA', 'FenjiMu']:
+            return 0.001
+        elif instrument.type == 'Future':
+            return CN_FUTURE_INFO[instrument.underlying_symbol]['tick_size']
+        else:
+            # NOTE: you can override get_tick_size in your custom data source
+            raise RuntimeError(_("Unsupported instrument type for tick size"))

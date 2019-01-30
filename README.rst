@@ -11,8 +11,8 @@ RQAlpha
 ..  image:: https://coveralls.io/repos/github/ricequant/rqalpha/badge.svg?branch=master
     :target: https://coveralls.io/github/ricequant/rqalpha?branch=master
 
-..  image:: https://readthedocs.org/projects/rqalpha/badge/?version=stable
-    :target: http://rqalpha.readthedocs.io/zh_CN/stable/?badge=stable
+..  image:: https://readthedocs.org/projects/rqalpha/badge/?version=latest
+    :target: http://rqalpha.readthedocs.io/zh_CN/latest/?badge=latest
     :alt: Documentation Status
 
 ..  image:: https://img.shields.io/pypi/v/rqalpha.svg
@@ -88,83 +88,30 @@ Mod名                      说明
 ======================    ==================================================================================
 `sys_analyser`_           【系统模块】记录每天的下单、成交、投资组合、持仓等信息，并计算风险度指标，并以csv、plot图标等形式输出分析结果
 `sys_funcat`_             【系统模块】支持以通达信公式的方式写策略
-`sys_progress`_           【系统模块】在控制台输出当前策略的回测进度。
+`sys_progress`_           【系统模块】在控制台输出当前策略的回测进度
 `sys_risk`_               【系统模块】对订单进行事前风控校验
 `sys_simulation`_         【系统模块】支持回测、撮合、滑点控制等
-`sys_stock_realtime`_     【系统模块】Demo 模块，用于展示如何接入自有行情进行回测/模拟/实盘
-`vnpy`_                   【第三方模块】通过 VNPY 对接期货实盘行情和实盘交易
+`incremental`_            【第三方模块】提供了回测中的持久化功能，用于增量运行回测
+`stock_realtime`_         【第三方模块】Demo 模块，用于展示如何接入自有行情进行回测/模拟/实盘
 `sentry`_                 【第三方模块】集成 sentry 的扩展，实现错误日志全自动采集、处理
 `tushare`_                【第三方模块】Demo Mod，用于展示如何通过tushare 获取实时Bar数据并组装以供RQAlpha使用
-`shipane`_                【第三方模块】集成实盘易SDK，用于对接股票实盘跟单交易
 ======================    ==================================================================================
 
 如果您基于 RQAlpha 进行了 Mod 扩展，欢迎告知我们，在审核通过后，会在 Mod 列表中添加您的 Mod 信息和链接。
 
-`专业级本地终端RQPro`_
-============================
+`金融数据RQData`_
+================
 
-..  image:: https://raw.githubusercontent.com/ricequant/rq-resource/master/rqalpha/RQPro.jpeg
+米筐自研时间序列数据模块RQData，采用双源多点备份，自动化清洗等手段保证数据的准确性。确保用户投研的脚步足够稳健。用户只需在策略中 :code:`import rqdatac`,即可通过API本地调用以下数据：
 
-目前 RQAlpha 开源版仅开放了日级别的历史数据和日回测功能，如果您是机构用户，需要做算法交易亦或是量化研究，都可以联系我们的机构端产品销售获得机构端产品功能支持，也可通过 `RQPro`_ 登记试用。「销售电话」：0755-33967716 「QQ」：4848371
+*   十年全品种（商品、国债、股指）、多频率（日、分钟、Tick）期货历史数据；
+*   2005年以来股票历史数据（日、分钟）；
+*   上市公式财务数据、指数行业板块构成数据等；
+*   公募基金净值、持仓、行业配置等数据；
+*   停牌、分红等衍生数据；
+*   无缝对接RQAlpha;
 
-RQPro产品功能：
-
-RQPro由米筐旗下三大核心模块与五大拓展功能组成，其中核心模块有金融数据RQData、策略引擎RQAlpha、绩效分析RQBeta。
-
-..  image:: https://raw.githubusercontent.com/ricequant/rq-resource/master/rqalpha/rqpro_1.jpeg
-
-*   完全本地部署，使用pycharm、anaconda等工具做本地策略研发、模拟以及实盘交易，效率大大加强，本地管理自己的策略提高保密性
-*   多资产（股票、期货，公募基金等）的精准、快速回测（日，分钟，Tick）
-*   策略的管理以及实盘的收益、风险计算等
-*   可拓展接口及SDK方便二次开发
-*   绩效分析模块全面比较不同策略的收益、风险及稳定性
-*   交易数据的保存以及提取分析
-*   技术支持及定制化开发
-
-Feature Status
-============================
-
-*   VNPY 对接 --> `vnpy`_
-
-    * ✅ 扩展VNPY_Gateway
-    * ✅ 实盘交易对接
-    * ✅ 数据源对接
-    * ✅ 事件源对接
-
-*   Tushare 对接
-
-    * ✅ 数据源对接 --> `rqalpha_mod_sys_stock_realtime`_
-    * ✅ 合成分钟线 --> `rqalpha_mod_tushare`_
-
-*   Tick 相关支持
-
-    * ✅ TICK 相关事件支持 --> `EVENT.PRE_TICK` | `EVENT.TICK` | `EVENT.POST_TICK`
-    * ✅ handle_tick 函数支持
-
-*   Mod Manager --> `通过 Mod 扩展 RQAlpha`_
-
-    * ✅ 定义 Mod 编写规范, workflow && Doc
-    * ✅ 提供 Mod Demo && Tutorial
-    * ✅ 提供 `rqalpha install xx_mod` 等命令 加载第三方 Mod
-
-*   Third-party Tools Integration
-
-    * ✅ 集成 Sentry --> `sentry`_
-
-*   i18n
-
-    * 🚫 English Doc
-
-*   Support Options
-
-    * 🚫 OptionAccount
-    * 🚫 OptionPosition
-
-*   Support BitCoin
-
-    * 🚫 BitcoinAccount
-    * 🚫 BitcoinPosition
-
+*目前RQData正在限额内测中，内测期用户可免费限流使用*， `点击链接免费开通`_ 。
 
 加入开发
 ============================
@@ -181,6 +128,12 @@ Feature Status
 *  可以通过 `索引`_ 或者使用搜索功能来查找特定问题
 *  在 `Github Issue`_ 中提交issue
 *  RQAlpha 交流群「487188429」
+
+防骗声明
+============================
+
+近日有部分 RQAlpha 的贡献者和关注者收到邮件，内容类似 "谢谢您对Ricequant/rqalpha项目的付出，扫描下面二维码收下红包！" 并附有二维码。
+该邮件并非 Ricequant 米筐科技发出，请各位宽客不要扫描二维码，亦不要点击邮件中的链接，保护个人信息和财产安全，谨防上当受骗，
 
 
 .. _Github Issue: https://github.com/ricequant/rqalpha/issues
@@ -207,7 +160,6 @@ Feature Status
 .. _TODO: https://github.com/ricequant/rqalpha/blob/master/TODO.md
 .. _develop 分支: https://github.com/ricequant/rqalpha/tree/develop
 .. _master 分支: https://github.com/ricequant/rqalpha
-.. _rqalpha_mod_sys_stock_realtime: https://github.com/ricequant/rqalpha/blob/master/rqalpha/mod/rqalpha_mod_sys_stock_realtime/README.rst
 .. _rqalpha_mod_tushare: https://github.com/ricequant/rqalpha-mod-tushare
 .. _通过 Mod 扩展 RQAlpha: http://rqalpha.io/zh_CN/latest/development/mod.html
 .. _sys_analyser: https://github.com/ricequant/rqalpha/blob/master/rqalpha/mod/rqalpha_mod_sys_analyser/README.rst
@@ -215,9 +167,12 @@ Feature Status
 .. _sys_progress: https://github.com/ricequant/rqalpha/blob/master/rqalpha/mod/rqalpha_mod_sys_progress/README.rst
 .. _sys_risk: https://github.com/ricequant/rqalpha/blob/master/rqalpha/mod/rqalpha_mod_sys_risk/README.rst
 .. _sys_simulation: https://github.com/ricequant/rqalpha/blob/master/rqalpha/mod/rqalpha_mod_sys_simulation/README.rst
-.. _sys_stock_realtime: https://github.com/ricequant/rqalpha/blob/master/rqalpha/mod/rqalpha_mod_sys_stock_realtime/README.rst
+.. _incremental: https://github.com/ricequant/rqalpha-mod-incremental
+.. _stock_realtime: https://github.com/ricequant/rqalpha-mod-stock-realtime
 .. _vnpy: https://github.com/ricequant/rqalpha-mod-vnpy
 .. _sentry: https://github.com/ricequant/rqalpha-mod-sentry
 .. _tushare: https://github.com/ricequant/rqalpha-mod-tushare
 .. _shipane: https://github.com/wh1100717/rqalpha-mod-ShiPanE
+.. _金融数据RQData: https://www.ricequant.com/doc/rqdata-institutional
+.. _点击链接免费开通: https://ricequant.mikecrm.com/h7ZFJnT
 

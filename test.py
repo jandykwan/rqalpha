@@ -27,7 +27,7 @@ import pandas as pd
 import numpy as np
 import coverage
 
-from rqalpha import run
+from rqalpha import run, run_func
 from rqalpha.utils.logger import system_log
 
 TEST_DIR = os.path.abspath("./tests/")
@@ -62,18 +62,18 @@ def run_tests(file_path=None):
             # print(df.drop(result.columns[result.all()], axis=1))
             print(result.all())
     print(u"=" * 40)
-    print(u"[{}|{}] strategies has been passed!".format(len(files) - len(error_map), len(files)))
+    print(
+        u"[{}|{}] strategies has been passed!".format(
+            len(files) - len(error_map), len(files)
+        )
+    )
     return len(error_map)
 
 
 def run_test(filename):
-    config = {
-        "base": {
-            "strategy_file": os.path.join(TEST_DIR, filename)
-        }
-    }
+    config = {"base": {"strategy_file": os.path.join(TEST_DIR, filename)}}
     print(u"Start test: " + str(config["base"]["strategy_file"]))
-    result_dict = run(config)['sys_analyser']
+    result_dict = run(config)["sys_analyser"]
     df = result_dict["portfolio"]
     # del df['positions']
 
@@ -109,21 +109,33 @@ def run_test(filename):
             return result.all(), (df, old_df, result)
 
         # 比较 summary
-        old_df = pd.DataFrame(data=[{"val": val} for val in old_result_dict["summary"].values()],
-                              index=old_result_dict["summary"].keys()).sort_index().T.fillna(0)
-        df = pd.DataFrame(data=[{"val": val} for val in result_dict["summary"].values()],
-                          index=result_dict["summary"].keys()).sort_index().T.fillna(0)
+        old_df = (
+            pd.DataFrame(
+                data=[{"val": val} for val in old_result_dict["summary"].values()],
+                index=old_result_dict["summary"].keys(),
+            )
+            .sort_index()
+            .T.fillna(0)
+        )
+        df = (
+            pd.DataFrame(
+                data=[{"val": val} for val in result_dict["summary"].values()],
+                index=result_dict["summary"].keys(),
+            )
+            .sort_index()
+            .T.fillna(0)
+        )
         try:
-            del old_df['daily_pnl']
-            del old_df['daily_returns']
-            del old_df['dividend_receivable']
-            del old_df['strategy_file']
-            del df['strategy_file']
+            del old_df["daily_pnl"]
+            del old_df["daily_returns"]
+            del old_df["dividend_receivable"]
+            del old_df["strategy_file"]
+            del df["strategy_file"]
         except:
             pass
         try:
-            del old_df['strategy_file']
-            del df['strategy_file']
+            del old_df["strategy_file"]
+            del df["strategy_file"]
         except:
             pass
         result = df.eq(old_df)
@@ -134,152 +146,21 @@ def run_test(filename):
 
 
 def is_enable_coverage():
-    return os.environ.get('COVERAGE') == "enabled"
+    return os.environ.get("COVERAGE") == "enabled"
 
 
-def test_api():
+def test_api(specific_test=None):
     # FIXME: Error msg is hard to understand @zjuguxi
-    # return
-
     print(u"Testing API......")
-    from rqalpha import run
 
-    from tests.api.test_api_base import (
-        test_get_order_code_new,
-        test_get_open_order_code_new,
-        test_cancel_order_code_new,
-        test_update_universe_code_new,
-        test_subscribe_code_new,
-        test_unsubscribe_code_new,
-        test_get_yield_curve_code_new,
-        test_history_bars_code_new,
-        test_all_instruments_code_new,
-        test_instruments_code_new,
-        test_sector_code_new,
-        test_concept_code_new,
-        test_industry_code_new,
-        test_get_trading_dates_code_new,
-        test_get_previous_trading_date_code_new,
-        test_get_next_trading_date_code_new,
-        test_get_dividend_code_new,
-    )
+    from tests.api import test_strategies as test_api_strategies
+    from tests.mod import test_strategies as test_mod_strategies
 
-    from tests.api.test_api_stock import (
-        test_order_shares_code_new, test_order_lots_code_new,
-        test_order_value_code_new,
-        test_order_percent_code_new, test_order_target_value_code_new,
-    )
-
-    from tests.api.test_api_future import (
-        test_buy_open_code_new,
-        test_sell_open_code_new,
-        test_buy_close_code_new,
-        test_sell_close_code_new,
-    )
-
-    base_api_config = {
-        "base": {
-            "start_date": "2016-12-01",
-            "end_date": "2016-12-31",
-            "frequency": "1d",
-            "matching_type": "next_bar",
-            "strategy_file": 'rqalpha/__init__.py',
-            "accounts": {
-                "stock": 1000000
-            }
-        },
-        "extra": {
-            "log_level": "error",
-        },
-        "mod": {
-            "sys_progress": {
-                "enabled": True,
-                "show": True,
-            },
-        },
-    }
-
-    stock_api_config = {
-        "base": {
-            "start_date": "2016-03-07",
-            "end_date": "2016-03-08",
-            "frequency": "1d",
-            "matching_type": "next_bar",
-            "strategy_file": 'rqalpha/__init__.py',
-            "accounts": {
-                "stock": 100000000
-            }
-        },
-        "extra": {
-            "log_level": "error",
-        },
-        "mod": {
-            "sys_progress": {
-                "enabled": True,
-                "show": True,
-            },
-        },
-    }
-
-    future_api_config = {
-        "base": {
-            "start_date": "2016-03-07",
-            "end_date": "2016-03-08",
-            "frequency": "1d",
-            "matching_type": "next_bar",
-            "strategy_file": 'rqalpha/__init__.py',
-            "accounts": {
-                "future": 10000000000
-            }
-        },
-        "extra": {
-            "log_level": "error",
-        },
-        "mod": {
-            "sys_progress": {
-                "enabled": True,
-                "show": True,
-            },
-        },
-    }
-
-    # =================== Test Base API ===================
-    tasks = []
-
-    tasks.append((base_api_config, test_get_order_code_new, "test_get_order_code_new"))
-    tasks.append((base_api_config, test_get_open_order_code_new, "test_get_open_order_code_new"))
-    tasks.append((base_api_config, test_cancel_order_code_new, "test_cancel_order_code_new"))
-    tasks.append((base_api_config, test_update_universe_code_new, "test_update_universe_code_new"))
-    tasks.append((base_api_config, test_subscribe_code_new, "test_subscribe_code_new"))
-    tasks.append((base_api_config, test_unsubscribe_code_new, "test_unsubscribe_code_new"))
-    tasks.append((base_api_config, test_get_yield_curve_code_new, "test_get_yield_curve_code_new"))
-    tasks.append((base_api_config, test_history_bars_code_new, "test_history_bars_code_new"))
-    tasks.append((base_api_config, test_all_instruments_code_new, "test_all_instruments_code_new"))
-    tasks.append((base_api_config, test_instruments_code_new, "test_instruments_code_new"))
-    tasks.append((base_api_config, test_sector_code_new, "test_sector_code_new"))
-    tasks.append((base_api_config, test_industry_code_new, "test_industry_code_new"))
-    tasks.append((base_api_config, test_concept_code_new, "test_concept_code_new"))
-    tasks.append((base_api_config, test_get_trading_dates_code_new, "test_get_trading_dates_code_new"))
-    tasks.append((base_api_config, test_get_previous_trading_date_code_new, "test_get_previous_trading_date_code_new"))
-    tasks.append((base_api_config, test_get_next_trading_date_code_new, "test_get_next_trading_date_code_new"))
-    tasks.append((base_api_config, test_get_dividend_code_new, "test_get_dividend_code_new"))
-
-    # =================== Test Stock API ===================
-    tasks.append((stock_api_config, test_order_shares_code_new, "test_order_shares_code_new"))
-    tasks.append((stock_api_config, test_order_lots_code_new, "test_order_lots_code_new"))
-    tasks.append((stock_api_config, test_order_value_code_new, "test_order_value_code_new"))
-    tasks.append((stock_api_config, test_order_percent_code_new, "test_order_percent_code_new"))
-    tasks.append((stock_api_config, test_order_target_value_code_new, "test_order_target_value_code_new"))
-
-    # =================== Test Future API ===================
-    tasks.append((future_api_config, test_buy_open_code_new, "test_buy_open_code_new"))
-    tasks.append((future_api_config, test_sell_open_code_new, "test_sell_open_code_new"))
-    tasks.append((future_api_config, test_buy_close_code_new, "test_buy_close_code_new"))
-    tasks.append((future_api_config, test_sell_close_code_new, "test_sell_close_code_new"))
-
-    for cfg, source_code, name in tasks:
-        print("running", name)
-        run(cfg, source_code)
+    for strategy in test_api_strategies + test_mod_strategies:
+        if specific_test and strategy["name"] != specific_test:
+            continue
+        print("running", strategy["name"])
+        run_func(**strategy)
 
     print(u"API test ends.")
 
@@ -291,7 +172,7 @@ def test_strategy():
 def write_csv(path, fields):
     old_test_times = []
     if not os.path.exists(path):
-        with open(path, 'w') as csv_file:
+        with open(path, "w") as csv_file:
             writer = csv.DictWriter(csv_file, fieldnames=fields)
             writer.writeheader()
     with open(path) as csv_file:
@@ -299,58 +180,82 @@ def write_csv(path, fields):
         for row in reader:
             old_test_times.append(row)
 
-    if performance_path is None:
-        if len(old_test_times) != 0 and time_spend > float(old_test_times[-1]["time_spend"]) * 1.1:
-            system_log.error("代码咋写的，太慢了！")
-            system_log.error("上次测试用例执行的总时长为：" + old_test_times[-1]["time_spend"])
-            system_log.error("本次测试用例执行的总时长增长为: " + str(time_spend))
+    if performance_path is not None:
+        if (
+            0 < len(old_test_times) < 5
+            and time_spend
+            > float(sum(float(i["time_spend"]) for i in old_test_times))
+            / len(old_test_times)
+            * 1.1
+        ):
+            print(
+                "Average time of last 5 runs:",
+                float(sum(float(i["time_spend"]) for i in old_test_times))
+                / len(old_test_times),
+            )
+            print("Now time spend:", time_spend)
+            raise RuntimeError("Performance regresses!")
+        elif (
+            len(old_test_times) >= 5
+            and time_spend
+            > float(sum(float(i["time_spend"]) for i in old_test_times[-5:])) / 5 * 1.1
+        ):
+            print(
+                "Average time of last 5 runs:",
+                float(sum(float(i["time_spend"]) for i in old_test_times[-5:])) / 5,
+            )
+            print("Now time spend:", time_spend)
+            raise RuntimeError("Performance regresses!")
         else:
-            with open(path, 'a') as csv_file:
+            with open(path, "a") as csv_file:
                 writer = csv.DictWriter(csv_file, fieldnames=fields)
-                writer.writerow({'date_time': end_time, 'time_spend': time_spend})
-    else:
-        if 0 < len(old_test_times) < 5 and time_spend > float(sum(float(i['time_spend']) for i in old_test_times)) / len(old_test_times) * 1.1:
-            print('Average time of last 5 runs:', float(sum(float(i['time_spend']) for i in old_test_times))/len(old_test_times))
-            print('Now time spend:', time_spend)
-            raise RuntimeError('Performance regresses!')
-        elif len(old_test_times) >= 5 and time_spend > float(sum(float(i['time_spend']) for i in old_test_times[-5:])) / 5 * 1.1:
-            print('Average time of last 5 runs:',
-                  float(sum(float(i['time_spend']) for i in old_test_times[-5:])) / 5)
-            print('Now time spend:', time_spend)
-            raise RuntimeError('Performance regresses!')
-        else:
-            with open(path, 'a') as csv_file:
-                writer = csv.DictWriter(csv_file, fieldnames=fields)
-                writer.writerow({'date_time': end_time, 'time_spend': time_spend})
+                writer.writerow({"date_time": end_time, "time_spend": time_spend})
 
 
-if __name__ == '__main__':
+def run_unit_tests():
+    from unittest import TextTestRunner
+
+    from tests.unittest import load_tests
+
+    result = TextTestRunner(verbosity=2).run(load_tests())
+    if not result.wasSuccessful():
+        raise RuntimeError("Unittest failed.")
+
+
+if __name__ == "__main__":
     if is_enable_coverage():
         print("enable coverage")
         cov = coverage.Coverage()
         cov.start()
 
     performance_path = None
-    field_names = ['date_time', 'time_spend']
+    field_names = ["date_time", "time_spend"]
 
     start_time = datetime.now()
 
     if len(sys.argv) >= 2:
-        if sys.argv[1] == 'api':
-            test_api()
+        if sys.argv[1] == "api":
+            try:
+                test_api(sys.argv[2])
+            except IndexError:
+                test_api()
             end_time = datetime.now()
 
-        elif sys.argv[1] == 'strategy':
+        elif sys.argv[1] == "strategy":
             test_strategy()
             end_time = datetime.now()
 
-        elif sys.argv[1] == 'performance':
-            test_api()
+        elif sys.argv[1] == "performance":
+            # test_api()
             test_strategy()
             end_time = datetime.now()
             performance_path = sys.argv[2]
             time_spend = (end_time - start_time).total_seconds()
             write_csv(performance_path, field_names)
+
+        elif sys.argv[1] == "unittest":
+            run_unit_tests()
+            end_time = datetime.now()
 
         else:
             target_file = sys.argv[1]
@@ -358,6 +263,7 @@ if __name__ == '__main__':
             end_time = datetime.now()
 
     else:
+        run_unit_tests()
         test_api()
         error_count = run_tests()
         end_time = datetime.now()
@@ -367,7 +273,7 @@ if __name__ == '__main__':
             write_csv(time_csv_file_path, field_names)
 
         else:
-            print('Failed!')
+            print("Failed!")
             sys.exit(-1)
     if is_enable_coverage():
         cov.stop()

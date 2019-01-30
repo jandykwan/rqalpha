@@ -17,20 +17,18 @@
 import os
 import locale
 import codecs
-from pprint import pformat
 
 import pandas as pd
-import logbook
 import yaml
 import simplejson as json
 import six
 
-from rqalpha.const import RUN_TYPE, PERSIST_MODE
+from rqalpha.const import RUN_TYPE, PERSIST_MODE, MARKET, COMMISSION_TYPE
 from rqalpha.utils import RqAttrDict, logger
 from rqalpha.utils.i18n import gettext as _, localization
 from rqalpha.utils.dict_func import deep_update
 from rqalpha.utils.py2 import to_utf8
-from rqalpha.utils.logger import user_log, user_system_log, system_log, std_log
+from rqalpha.utils.logger import system_log
 from rqalpha.mod.utils import mod_config_value_parse
 
 
@@ -47,23 +45,30 @@ def load_json(path):
         return json.loads(f.read())
 
 
-def load_config(path):
-    return load_json(path) if path.endswith('.json') else load_yaml(path)
-
-
 default_config_path = os.path.join(os.path.dirname(__file__), '..', 'config.yml')
 default_mod_config_path = os.path.join(os.path.dirname(__file__), '..', 'mod_config.yml')
 
 
 def user_mod_conf_path():
-    return os.path.expanduser(os.path.join(rqalpha_path, 'mod_config.yml'))
+    return os.path.join(os.path.expanduser(rqalpha_path), 'mod_config.yml')
 
 
 def get_mod_conf():
     base = load_yaml(default_mod_config_path)
-    user_mod_conf = os.path.expanduser(os.path.join(rqalpha_path, 'mod_config.yml'))
+    user_mod_conf = os.path.join(os.path.expanduser(rqalpha_path), 'mod_config.yml')
     user = load_yaml(user_mod_conf) if os.path.exists(user_mod_conf) else {}
     deep_update(user, base)
+    return base
+
+
+def load_config_from_folder(folder):
+    folder = os.path.expanduser(folder)
+    path = os.path.join(folder, 'config.yml')
+    base = load_yaml(path) if os.path.exists(path) else {}
+    mod_path = os.path.join(folder, 'mod_config.yml')
+    mod = load_yaml(mod_path) if os.path.exists(mod_path) else {}
+
+    deep_update(mod, base)
     return base
 
 
@@ -76,23 +81,11 @@ def default_config():
 
 
 def user_config():
-    path = os.path.expanduser(os.path.join(rqalpha_path, 'config.yml'))
-    base = load_yaml(path) if os.path.exists(path) else {}
-    mod_path = os.path.expanduser(os.path.join(rqalpha_path, 'mod_config.yml'))
-    mod = load_yaml(mod_path) if os.path.exists(mod_path) else {}
-
-    deep_update(mod, base)
-    return base
+    return load_config_from_folder(rqalpha_path)
 
 
 def project_config():
-    path = os.path.join(os.getcwd(), 'config.yml')
-    base = load_yaml(path) if os.path.exists(path) else {}
-    mod_path = os.path.join(os.getcwd(), 'mod_config.yml')
-    mod = load_yaml(mod_path) if os.path.exists(mod_path) else {}
-
-    deep_update(mod, base)
-    return base
+    return load_config_from_folder(os.getcwd())
 
 
 def code_config(config, source_code=None):
@@ -139,6 +132,8 @@ def parse_config(config_args, config_path=None, click_type=False, source_code=No
     conf = default_config()
     deep_update(user_config(), conf)
     deep_update(project_config(), conf)
+    if config_path is not None:
+        deep_update(load_yaml(config_path), conf)
 
     if 'base__strategy_file' in config_args and config_args['base__strategy_file']:
         # FIXME: ugly, we need this to get code
@@ -189,23 +184,49 @@ def parse_config(config_args, config_path=None, click_type=False, source_code=No
 
     config.base.run_type = parse_run_type(config.base.run_type)
     config.base.accounts = parse_accounts(config.base.accounts)
+    config.base.init_positions = parse_init_positions(config.base.init_positions)
     config.base.persist_mode = parse_persist_mode(config.base.persist_mode)
+    config.base.market = parse_market(config.base.market)
+    config.base.future_info = parse_future_info(config.base.future_info)
 
     if config.extra.context_vars:
         if isinstance(config.extra.context_vars, six.string_types):
             config.extra.context_vars = json.loads(to_utf8(config.extra.context_vars))
 
-    system_log.level = getattr(logbook, config.extra.log_level.upper(), logbook.NOTSET)
-    std_log.level = getattr(logbook, config.extra.log_level.upper(), logbook.NOTSET)
-    user_log.level = getattr(logbook, config.extra.log_level.upper(), logbook.NOTSET)
-    user_system_log.level = getattr(logbook, config.extra.log_level.upper(), logbook.NOTSET)
-
     if config.base.frequency == "1d":
         logger.DATETIME_FORMAT = "%Y-%m-%d"
 
-    system_log.debug("\n" + pformat(config.convert_to_dict()))
-
     return config
+
+
+def parse_future_info(future_info):
+    new_info = {}
+
+    for underlying_symbol, info in six.iteritems(future_info):
+        try:
+            underlying_symbol = underlying_symbol.upper()
+        except AttributeError:
+            raise RuntimeError(_("Invalid future info: underlying_symbol {} is illegal.".format(underlying_symbol)))
+
+        for field, value in six.iteritems(info):
+            if field in (
+                "open_commission_ratio", "close_commission_ratio", "close_commission_today_ratio"
+            ):
+                new_info.setdefault(underlying_symbol, {})[field] = float(value)
+            elif field == "commission_type":
+                if isinstance(value, six.string_types) and value.upper() == "BY_MONEY":
+                    new_info.setdefault(underlying_symbol, {})[field] = COMMISSION_TYPE.BY_MONEY
+                elif isinstance(value, six.string_types) and value.upper() == "BY_VOLUME":
+                    new_info.setdefault(underlying_symbol, {})[field] = COMMISSION_TYPE.BY_VOLUME
+                elif isinstance(value, COMMISSION_TYPE):
+                    new_info.setdefault(underlying_symbol, {})[field] = value
+                else:
+                    raise RuntimeError(_(
+                        "Invalid future info: commission_type is suppose to be BY_MONEY or BY_VOLUME"
+                    ))
+            else:
+                raise RuntimeError(_("Invalid future info: field {} is not valid".format(field)))
+    return new_info
 
 
 def parse_accounts(accounts):
@@ -218,9 +239,30 @@ def parse_accounts(accounts):
             continue
         starting_cash = float(starting_cash)
         a[account_type.upper()] = starting_cash
-    if len(a) == 0:
-        raise RuntimeError(_(u"None account type has been selected."))
+
+    # if len(a) == 0:
+    #     raise RuntimeError(_(u"None account type has been selected."))
+
     return a
+
+
+def parse_init_positions(positions):
+    # --position 000001.XSHE:1000,IF1701:-1
+    result = []
+    if not isinstance(positions, str):
+        return result
+    for s in positions.split(','):
+        try:
+            order_book_id, quantity = s.split(':')
+        except ValueError:
+            raise RuntimeError(_(u"invalid init position {}, should be in format 'order_book_id:quantity'").format(s))
+
+        try:
+            result.append((order_book_id, float(quantity)))
+        except ValueError:
+            raise RuntimeError(_(u"invalid quantity for instrument {order_book_id}: {quantity}").format(
+                order_book_id=order_book_id, quantity=quantity))
+    return result
 
 
 def parse_run_type(rt_str):
@@ -241,8 +283,22 @@ def parse_persist_mode(persist_mode):
     mapping = {
         "real_time": PERSIST_MODE.REAL_TIME,
         "on_crash": PERSIST_MODE.ON_CRASH,
+        "on_normal_exit": PERSIST_MODE.ON_NORMAL_EXIT,
     }
     try:
         return mapping[persist_mode]
     except KeyError:
         raise RuntimeError(_(u"unknown persist mode: {}").format(persist_mode))
+
+
+def parse_market(market):
+    assert isinstance(market, six.string_types)
+    mapping = {
+        "cn": MARKET.CN,
+        "hk": MARKET.HK
+    }
+
+    try:
+        return mapping[market.lower()]
+    except KeyError:
+        raise RuntimeError(_(u"unknown market type: {}".format(market)))

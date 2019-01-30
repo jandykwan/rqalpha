@@ -21,7 +21,7 @@ RQAlpha - a Algorithm Trading System
 import pkgutil
 
 from rqalpha.__main__ import cli
-from rqalpha.api.api_base import export_as_api
+from rqalpha.api.api_base import export_as_api, subscribe_event
 
 __all__ = [
     '__version__',
@@ -47,8 +47,8 @@ def load_ipython_extension(ipython):
 
 
 def update_bundle(data_bundle_path=None, locale="zh_Hans_CN", confirm=True):
-    from rqalpha import main
-    main.update_bundle(data_bundle_path=data_bundle_path, locale=locale, confirm=confirm)
+    import rqalpha.utils.bundle_helper
+    rqalpha.utils.bundle_helper.update_bundle(data_bundle_path=data_bundle_path, locale=locale, confirm=confirm)
 
 
 def run(config, source_code=None):
@@ -141,15 +141,3 @@ def run_func(**kwargs):
     config = parse_config(config, user_funcs=user_funcs)
     clear_all_cached_functions()
     return main.run(config, user_funcs=user_funcs)
-
-
-def subscribe_event(event_type, handler):
-    import types
-    from rqalpha.events import EVENT
-    from rqalpha.environment import Environment
-
-    assert isinstance(handler, types.FunctionType)
-    assert isinstance(event_type, EVENT)
-
-    env = Environment.get_instance()
-    env.event_bus.add_listener(event_type, handler)

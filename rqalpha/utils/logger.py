@@ -15,13 +15,10 @@
 # limitations under the License.
 
 from datetime import datetime
-import traceback
 import logbook
-import better_exceptions
-from logbook import Logger
-from logbook.more import ColorizedStderrHandler
+from logbook import Logger, StderrHandler
 
-from rqalpha.utils.py2 import to_utf8, from_utf8
+from rqalpha.utils.py2 import to_utf8
 
 logbook.set_datetime_format("local")
 
@@ -30,29 +27,14 @@ logbook.set_datetime_format("local")
 logbook.base._level_names[logbook.base.WARNING] = 'WARN'
 
 
-# better_exceptions hot patch
-def format_exception(exc, value, tb):
-    formatted, colored_source = better_exceptions.format_traceback(tb)
-
-    if not str(value) and exc is AssertionError:
-        value.args = (colored_source,)
-    title = traceback.format_exception_only(exc, value)
-    title = from_utf8(title[0].strip())
-    full_trace = u'Traceback (most recent call last):\n{}{}\n'.format(formatted, title)
-
-    return full_trace
-
-
-better_exceptions.format_exception = format_exception
-
-
 __all__ = [
     "user_log",
     "system_log",
+    "user_system_log",
 ]
 
 
-DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.00"
+DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 
 
 def user_std_handler_log_formatter(record, handler):
@@ -70,7 +52,7 @@ def user_std_handler_log_formatter(record, handler):
     return log
 
 
-user_std_handler = ColorizedStderrHandler(bubble=True)
+user_std_handler = StderrHandler(bubble=True)
 user_std_handler.formatter = user_std_handler_log_formatter
 
 
@@ -98,18 +80,20 @@ user_system_log = Logger("user_system_log")
 
 # 用于用户异常的详细日志打印
 user_detail_log = Logger("user_detail_log")
-# user_detail_log.handlers.append(ColorizedStderrHandler(bubble=True))
+# user_detail_log.handlers.append(StderrHandler(bubble=True))
 
 # 系统日志
 system_log = Logger("system_log")
+basic_system_log = Logger("basic_system_log")
 
 # 标准输出日志
 std_log = Logger("std_log")
 
 
 def init_logger():
-    system_log.handlers = [ColorizedStderrHandler(bubble=True)]
-    std_log.handlers = [ColorizedStderrHandler(bubble=True)]
+    system_log.handlers = [StderrHandler(bubble=True)]
+    basic_system_log.handlers = [StderrHandler(bubble=True)]
+    std_log.handlers = [StderrHandler(bubble=True)]
     user_log.handlers = []
     user_system_log.handlers = []
 
